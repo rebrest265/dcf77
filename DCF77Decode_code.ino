@@ -204,15 +204,17 @@ void onDCF77Waiting()
 void onDCF77BitReceived(uint8_t bit, uint8_t index, const uint8_t* bitArray)
 {
   if (index == 0) {
-    // Deduplicate minute rollover: only apply if the software clock hasn't already rolled over
-    if (!isSynced || currentSeconds >= 50) {
-      if (nextTimeValid) {
-        currentTime = nextTime;
-        nextTimeValid = false;
-        isSynced = true;
-        syncError = false;
-      } else if (isSynced) {
-        incrementCurrentTime();
+    if (nextTimeValid) {
+      currentTime = nextTime;
+      nextTimeValid = false;
+      isSynced = true;
+      syncError = false;
+      currentSeconds = 0;
+      lastSecondMillis = millis();
+    } else if (isSynced) {
+      // If we failed to decode the previous minute, this index=0 might be a false noise gap.
+      // Do NOT increment the time. Let advanceSoftwareClock handle the time smoothly.
+      if (currentSeconds >= 50) {
         syncError = true;
       }
     }
@@ -223,8 +225,11 @@ void onDCF77BitReceived(uint8_t bit, uint8_t index, const uint8_t* bitArray)
   {
     if (isSynced)
     {
-      currentSeconds = index;
-      lastSecondMillis = millis();
+      if (!syncError) {
+        // Only tightly lock the seconds to the hardware if we are confident in the signal
+        currentSeconds = index;
+        lastSecondMillis = millis();
+      }
       // Show synced time with live seconds counter
       updateLCDDisplay(&currentTime, currentSeconds);
     }
