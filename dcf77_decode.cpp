@@ -57,6 +57,7 @@ int receiveDCF77(uint8_t* bitArray, uint8_t size)
   for (i = 0; i < DCF77_STRING_SIZE; i++) 
   {
     highDuration = pulseIn(DCF77_PIN, HIGH, TIMEOUT_DURATION);
+    onDCF77Tick(); // Keep the software clock ticking!
     
     if (highDuration == 0) 
     {

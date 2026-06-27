@@ -210,17 +210,20 @@ void onDCF77BitReceived(uint8_t bit, uint8_t index, const uint8_t* bitArray)
       isSynced = true;
       syncError = false;
     } else if (isSynced) {
-      // Prevent double increment and false errors if software clock already rolled over recently
+      // If we failed to decode the previous minute, this index=0 might be a false noise gap.
+      // Do NOT increment the time manually. Let advanceSoftwareClock handle it smoothly.
       if (currentSeconds >= 50) {
-        incrementCurrentTime();
         syncError = true;
       }
     }
   }
 
   if (isSynced) {
-    currentSeconds = index;
-    lastSecondMillis = millis();
+    if (!syncError) {
+      // Only tightly lock the seconds to the hardware if we are confident in the signal
+      currentSeconds = index;
+      lastSecondMillis = millis();
+    }
   }
 
 #ifdef USE_LCD
